@@ -4,7 +4,6 @@ import io.tarantool.client.box.TarantoolBoxClient;
 import io.tarantool.client.box.TarantoolBoxSpace;
 import io.tarantool.client.box.options.SelectOptions;
 import io.tarantool.core.protocol.BoxIterator;
-import io.tarantool.mapping.SelectResponse;
 import io.tarantool.mapping.TarantoolResponse;
 import io.tarantool.mapping.Tuple;
 import java.util.Arrays;
@@ -19,9 +18,8 @@ import vk.kvstore.util.TupleMapper;
 
 public final class TarantoolKeyValueRepository implements KeyValueRepository {
 
+  private static final String COUNT_FUNCTION = "kv_count";
   private static final String PRIMARY_INDEX = "primary";
-  private static final String COUNT_EXPRESSION =
-      "local space_name = ...; local target_space = box.space[space_name]; return target_space:len()";
 
   private final TarantoolBoxClient client;
   private final TarantoolBoxSpace space;
@@ -46,7 +44,7 @@ public final class TarantoolKeyValueRepository implements KeyValueRepository {
 
   @Override
   public Optional<KeyValueEntry> get(String key) {
-    SelectResponse<List<Tuple<List<?>>>> response =
+    io.tarantool.mapping.SelectResponse<List<Tuple<List<?>>>> response =
         FutureUtils.await(space.select(Collections.singletonList(requireNonNull(key, "key"))));
     List<Tuple<List<?>>> tuples = response.get();
     if (tuples.isEmpty()) {
@@ -65,7 +63,7 @@ public final class TarantoolKeyValueRepository implements KeyValueRepository {
   @Override
   public long count() {
     TarantoolResponse<List<?>> response =
-        FutureUtils.await(client.eval(COUNT_EXPRESSION, Collections.singletonList(spaceName)));
+        FutureUtils.await(client.call(COUNT_FUNCTION, Collections.singletonList(spaceName)));
     List<?> values = response.get();
     if (values.size() != 1 || !(values.get(0) instanceof Number number)) {
       throw new StorageException("Unexpected count response: " + values);
@@ -96,7 +94,7 @@ public final class TarantoolKeyValueRepository implements KeyValueRepository {
         optionsBuilder.after(after);
       }
 
-      SelectResponse<List<Tuple<List<?>>>> response =
+      io.tarantool.mapping.SelectResponse<List<Tuple<List<?>>>> response =
           FutureUtils.await(
               space.select(Collections.singletonList(keySince), optionsBuilder.build()));
 

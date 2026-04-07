@@ -16,13 +16,6 @@ import vk.kvstore.storage.KeyValueRepository;
 import vk.kvstore.storage.TarantoolClientProvider;
 import vk.kvstore.storage.TarantoolKeyValueRepository;
 
-/**
- * Owns the gRPC server and Tarantool client lifecycle.
- *
- * <p>The server is configured lazily in {@link #start()} so tests or callers can instantiate the
- * class without opening network resources immediately. Shutdown is idempotent and closes the gRPC
- * server before releasing the Tarantool client.
- */
 public final class GrpcServer implements AutoCloseable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcServer.class);

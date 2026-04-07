@@ -2,12 +2,25 @@ services:
   tarantool:
     image: tarantool/tarantool:3.2.1
     container_name: kv-tarantool
-    ports:
-      - "3301:3301"
     environment:
       TT_CONFIG: /opt/tarantool/kv_config.yml
       TT_INSTANCE_NAME: instance001
+      TARANTOOL_PASSWORD: ${TARANTOOL_PASSWORD:?TARANTOOL_PASSWORD must be set}
     volumes:
-      - ./init.lua:/opt/tarantool/init.lua:ro
-      - ./kv_config.yml:/opt/tarantool/kv_config.yml:ro
+      - tarantool_data:/var/lib/tarantool
+      - ./tarantool/init.lua:/opt/tarantool/init.lua:ro
+      - ./tarantool/kv_config.yml:/opt/tarantool/kv_config.yml:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "printf '\\\\quit\\n' | TT_CLI_USERNAME=kv_app TT_CLI_PASSWORD=\"$$TARANTOOL_PASSWORD\" tt connect 127.0.0.1:3301 --binary >/dev/null"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
     command: ["tarantool", "/opt/tarantool/init.lua"]
+
+volumes:
+  tarantool_data:

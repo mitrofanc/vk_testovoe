@@ -21,7 +21,7 @@ public record ApplicationConfig(
     requireNonBlank(tarantoolHost, "tarantool.host");
     requirePositive(tarantoolPort, "tarantool.port");
     requireNonBlank(tarantoolUser, "tarantool.user");
-    Objects.requireNonNull(tarantoolPassword, "tarantool.password must not be null");
+    requireNonBlank(tarantoolPassword, "tarantool.password");
     requireNonBlank(tarantoolSpace, "tarantool.space");
     requirePositive(rangeBatchSize, "tarantool.range-batch-size");
   }
@@ -43,7 +43,7 @@ public record ApplicationConfig(
         stringValue(properties, "tarantool.host", "TARANTOOL_HOST", false),
         integerValue(properties, "tarantool.port", "TARANTOOL_PORT"),
         stringValue(properties, "tarantool.user", "TARANTOOL_USER", false),
-        stringValue(properties, "tarantool.password", "TARANTOOL_PASSWORD", true),
+        stringValue(properties, "tarantool.password", "TARANTOOL_PASSWORD", false),
         stringValue(properties, "tarantool.space", "TARANTOOL_SPACE", false),
         integerValue(properties, "tarantool.range-batch-size", "TARANTOOL_RANGE_BATCH_SIZE"));
   }

@@ -1,0 +1,19 @@
+services:
+  grpc-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: kv-grpc-server
+    depends_on:
+      tarantool:
+        condition: service_healthy
+    environment:
+      GRPC_PORT: 9090
+      TARANTOOL_HOST: tarantool
+      TARANTOOL_PORT: 3301
+      TARANTOOL_USER: kv_app
+      TARANTOOL_PASSWORD: ${TARANTOOL_PASSWORD:?TARANTOOL_PASSWORD must be set}
+      TARANTOOL_SPACE: kv
+      TARANTOOL_RANGE_BATCH_SIZE: 1000
+    ports:
+      - "127.0.0.1:9090:9090"

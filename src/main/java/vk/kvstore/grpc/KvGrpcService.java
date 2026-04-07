@@ -1,5 +1,6 @@
 package vk.kvstore.grpc;
 
+import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import java.util.Optional;
 import vk.kvstore.model.KeyValueEntry;
@@ -30,8 +31,8 @@ public final class KvGrpcService extends KvStoreGrpc.KvStoreImplBase {
       keyValueService.put(request.getKey(), ProtoValueMapper.fromProto(request.getValue()));
       responseObserver.onNext(PutResponse.getDefaultInstance());
       responseObserver.onCompleted();
-    } catch (Throwable throwable) {
-      responseObserver.onError(GrpcExceptionMapper.toStatusRuntimeException(throwable));
+    } catch (Exception exception) {
+      responseObserver.onError(GrpcExceptionMapper.toStatusRuntimeException(exception));
     }
   }
 
@@ -43,8 +44,8 @@ public final class KvGrpcService extends KvStoreGrpc.KvStoreImplBase {
       entry.ifPresent(value -> response.setValue(ProtoValueMapper.toProto(value.value())));
       responseObserver.onNext(response.build());
       responseObserver.onCompleted();
-    } catch (Throwable throwable) {
-      responseObserver.onError(GrpcExceptionMapper.toStatusRuntimeException(throwable));
+    } catch (Exception exception) {
+      responseObserver.onError(GrpcExceptionMapper.toStatusRuntimeException(exception));
     }
   }
 
@@ -54,26 +55,36 @@ public final class KvGrpcService extends KvStoreGrpc.KvStoreImplBase {
       boolean deleted = keyValueService.delete(request.getKey());
       responseObserver.onNext(DeleteResponse.newBuilder().setDeleted(deleted).build());
       responseObserver.onCompleted();
-    } catch (Throwable throwable) {
-      responseObserver.onError(GrpcExceptionMapper.toStatusRuntimeException(throwable));
+    } catch (Exception exception) {
+      responseObserver.onError(GrpcExceptionMapper.toStatusRuntimeException(exception));
     }
   }
 
   @Override
   public void range(RangeRequest request, StreamObserver<RangeEntry> responseObserver) {
+    ServerCallStreamObserver<RangeEntry> serverObserver =
+        responseObserver instanceof ServerCallStreamObserver<RangeEntry> observer ? observer : null;
     try {
       keyValueService.range(
           request.getKeySince(),
           request.getKeyTo(),
-          entry ->
-              responseObserver.onNext(
-                  RangeEntry.newBuilder()
-                      .setKey(entry.key())
-                      .setValue(ProtoValueMapper.toProto(entry.value()))
-                      .build()));
-      responseObserver.onCompleted();
-    } catch (Throwable throwable) {
-      responseObserver.onError(GrpcExceptionMapper.toStatusRuntimeException(throwable));
+          entry -> {
+            if (serverObserver != null && serverObserver.isCancelled()) {
+              throw new StreamCancelledException();
+            }
+            responseObserver.onNext(
+                RangeEntry.newBuilder()
+                    .setKey(entry.key())
+                    .setValue(ProtoValueMapper.toProto(entry.value()))
+                    .build());
+          });
+      if (serverObserver == null || !serverObserver.isCancelled()) {
+        responseObserver.onCompleted();
+      }
+    } catch (StreamCancelledException ignored) {
+      // Client cancelled the stream; stop without sending extra frames.
+    } catch (Exception exception) {
+      responseObserver.onError(GrpcExceptionMapper.toStatusRuntimeException(exception));
     }
   }
 
@@ -83,8 +94,10 @@ public final class KvGrpcService extends KvStoreGrpc.KvStoreImplBase {
       responseObserver.onNext(
           CountResponse.newBuilder().setCount(keyValueService.count()).build());
       responseObserver.onCompleted();
-    } catch (Throwable throwable) {
-      responseObserver.onError(GrpcExceptionMapper.toStatusRuntimeException(throwable));
+    } catch (Exception exception) {
+      responseObserver.onError(GrpcExceptionMapper.toStatusRuntimeException(exception));
     }
   }
+
+  private static final class StreamCancelledException extends RuntimeException {}
 }
