@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://download.tarantool.org/tarantool/schema/config.schema.json
+
+iproto:
+  listen:
+    - uri: '0.0.0.0:3301'
+
+memtx:
+  memory: 4294967296
+
+process:
+  work_dir: /var/lib/tarantool
+
+snapshot:
+  dir: /var/lib/tarantool
+
+wal:
+  dir: /var/lib/tarantool
+
+groups:
+  group001:
+    replicasets:
+      replicaset001:
+        instances:
+          instance001: {}

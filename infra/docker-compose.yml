@@ -1,0 +1,13 @@
+services:
+  tarantool:
+    image: tarantool/tarantool:3.2.1
+    container_name: kv-tarantool
+    ports:
+      - "3301:3301"
+    environment:
+      TT_CONFIG: /opt/tarantool/kv_config.yml
+      TT_INSTANCE_NAME: instance001
+    volumes:
+      - ./init.lua:/opt/tarantool/init.lua:ro
+      - ./kv_config.yml:/opt/tarantool/kv_config.yml:ro
+    command: ["tarantool", "/opt/tarantool/init.lua"]
